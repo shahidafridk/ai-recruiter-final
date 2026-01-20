@@ -1,13 +1,17 @@
 # ui/streamlit_app.py
 
 import sys
+import io
 from pathlib import Path
 import streamlit as st
 import plotly.graph_objects as go
+import pdfplumber
+import pytesseract
+from pdf2image import convert_from_bytes
 
-# ----------------
+# --------------------------------------------------
 # SETUP & CONFIG
-# ---------------
+# --------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -15,9 +19,9 @@ from app.ai_recruiter_evaluator import evaluate_resume_with_ai
 
 st.set_page_config(page_title="AI Recruiter Pro", page_icon="🚀", layout="wide")
 
-# --------------------------------
+# --------------------------------------------------
 # CUSTOM CSS (Dark Mode Friendly)
-# -------------------------------
+# --------------------------------------------------
 st.markdown("""
     <style>
     .metric-card {
@@ -63,19 +67,50 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --------------------
+# --------------------------------------------------
+# HELPER: ROBUST PDF EXTRACTOR (Layouts + OCR)
+# --------------------------------------------------
+def extract_text_from_pdf(file):
+    text = ""
+    file_bytes = file.read()  # Read file into memory once
+    
+    try:
+        # METHOD 1: Structural Extraction (pdfplumber)
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            for page in pdf.pages:
+                extracted = page.extract_text(layout=True)
+                if extracted:
+                    text += extracted + "\n"
+        
+        # METHOD 2: OCR Fallback (if text is suspiciously short, e.g. < 50 chars)
+        if len(text.strip()) < 50:
+            images = convert_from_bytes(file_bytes)
+            ocr_text = ""
+            for img in images:
+                ocr_text += pytesseract.image_to_string(img)
+            text = ocr_text
+
+    except Exception as e:
+        return f"Error processing PDF: {str(e)}"
+
+    return text
+
+# --------------------------------------------------
 # HELPER: FILE READER
-# --------------------
+# --------------------------------------------------
 def read_input(file_upload, text_input):
     if file_upload:
+        if file_upload.type == "application/pdf":
+            return extract_text_from_pdf(file_upload)
+        # Default to TXT decoding
         return file_upload.read().decode("utf-8", errors="ignore")
     if text_input:
         return text_input.strip()
     return None
 
-# ----------------------------
+# --------------------------------------------------
 # HELPER: DYNAMIC GAUGE CHART
-# ---------------------------
+# --------------------------------------------------
 def create_gauge_chart(score):
     if score >= 75:
         bar_color = "#00CC96"  # Green
@@ -109,9 +144,9 @@ def create_gauge_chart(score):
     )
     return fig
 
-# ----------------
+# --------------------------------------------------
 # STATE MANAGEMENT
-# ----------------
+# --------------------------------------------------
 if "evaluation_result" not in st.session_state:
     st.session_state.evaluation_result = None
 
@@ -119,22 +154,22 @@ def reset_app():
     st.session_state.evaluation_result = None
     st.rerun()
 
-# ---------
+# --------------------------------------------------
 # SIDEBAR
-# ---------
+# --------------------------------------------------
 with st.sidebar:
     st.title("🚀 AI Recruiter Pro")
     st.markdown("---")
     st.markdown("### 🎯 How it Works")
-    st.markdown("1. **Upload Resume** (TXT)")
-    st.markdown("2. **Upload Job Description** (TXT)")
+    st.markdown("1. **Upload Resume** (PDF/TXT)")
+    st.markdown("2. **Upload Job Description** (PDF/TXT)")
     st.markdown("3. **Get AI Feedback**")
     st.markdown("---")
     st.info("💡 **Pro Tip:** Ensure your resume highlights impact and metrics, not just responsibilities.")
 
-# ---------
+# --------------------------------------------------
 # MAIN UI
-# ---------
+# --------------------------------------------------
 st.markdown("## 🤖 Intelligent Resume Screening System")
 st.markdown("Simulate a Senior Technical Recruiter evaluation in seconds.")
 st.divider()
@@ -149,7 +184,7 @@ if not st.session_state.evaluation_result:
         resume_tab_file, resume_tab_text = st.tabs(["📂 Upload File", "✍️ Paste Text"])
         
         with resume_tab_file:
-            resume_file = st.file_uploader("Upload Resume (TXT)", type=["txt"], key="res_file")
+            resume_file = st.file_uploader("Upload Resume (PDF/TXT)", type=["txt", "pdf"], key="res_file")
         with resume_tab_text:
             resume_text = st.text_area("Paste Resume Content", height=300, key="res_text")
 
@@ -158,7 +193,7 @@ if not st.session_state.evaluation_result:
         jd_tab_file, jd_tab_text = st.tabs(["📂 Upload File", "✍️ Paste Text"])
         
         with jd_tab_file:
-            jd_file = st.file_uploader("Upload JD (TXT)", type=["txt"], key="jd_file")
+            jd_file = st.file_uploader("Upload JD (PDF/TXT)", type=["txt", "pdf"], key="jd_file")
         with jd_tab_text:
             jd_text = st.text_area("Paste JD Content", height=300, key="jd_text")
 
@@ -277,5 +312,4 @@ else:
         if ka['weak_or_implicit_in_resume']:
             st.markdown(" ".join([f'<span class="weak-pill">~ {k}</span>' for k in ka['weak_or_implicit_in_resume']]), unsafe_allow_html=True)
         else:
-
             st.write("None.")
