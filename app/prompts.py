@@ -6,9 +6,9 @@ Centralized AI Prompts (Refined)
 This file controls HOW the AI thinks, reasons, and explains.
 """
 
-# --------------------------------------------------
+# --------------
 # SYSTEM PROMPT
-# --------------------------------------------------
+# --------------
 
 RECRUITER_SYSTEM_PROMPT = """
 You are a senior recruiter at a company reviewing a candidate's resume against a specific job description.
@@ -28,9 +28,9 @@ OUTPUT INSTRUCTION:
 You must output a single valid JSON object matching the requested structure.
 """
 
-# --------------------------------------------------
+# ----------------------
 # USER PROMPT TEMPLATE
-# --------------------------------------------------
+# ---------------------
 
 RECRUITER_USER_PROMPT_TEMPLATE = """
 JOB DESCRIPTION:
@@ -111,4 +111,5 @@ FINAL CONSTRAINTS:
 - If there are NO strengths, return an empty list.
 - Do NOT fabricate content.
 - Every major claim must be grounded in resume or job description content.
+
 """
