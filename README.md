@@ -18,4 +18,5 @@
 ## 🚀 How to Run Locally
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/your-username/ai-recruiter-project.git](https://github.com/your-username/ai-recruiter-project.git)
+
+   git clone https://github.com/shahidafridk/ai-recruiter-final.git
