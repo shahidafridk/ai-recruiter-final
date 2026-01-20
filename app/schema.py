@@ -17,9 +17,9 @@ is complete, well-formed, and renderable.
 from typing import Dict, Any, Tuple
 
 
-# --------------------------------------------------
+# -------------------
 # REQUIRED STRUCTURE
-# --------------------------------------------------
+# --------------------
 
 REQUIRED_TOP_LEVEL_FIELDS = {
     "decision": str,
@@ -40,9 +40,9 @@ KEYWORD_ANALYSIS_FIELDS = {
 }
 
 
-# --------------------------------------------------
+# ------------------
 # PUBLIC VALIDATOR
-# --------------------------------------------------
+# ------------------
 
 def validate_ai_output(output: Dict) -> Tuple[bool, str]:
     """
@@ -56,9 +56,9 @@ def validate_ai_output(output: Dict) -> Tuple[bool, str]:
     if not isinstance(output, dict):
         return False, "AI output must be a JSON object"
 
-    # -----------------------------
+    # ------------------
     # Top-level fields
-    # -----------------------------
+    # ------------------
     for field, expected_type in REQUIRED_TOP_LEVEL_FIELDS.items():
         if field not in output:
             return False, f"Missing required field: '{field}'"
@@ -69,9 +69,9 @@ def validate_ai_output(output: Dict) -> Tuple[bool, str]:
                 f"{_type_name(expected_type)}"
             )
 
-    # -----------------------------
-    # Decision sanity (NOT logic)
-    # -----------------------------
+    # ----------------
+    # Decision sanity 
+    # ----------------
     if output["decision"] not in {"PASS", "BORDERLINE", "REJECT"}:
         return False, (
             "Field 'decision' must be one of: PASS, BORDERLINE, REJECT"
@@ -80,9 +80,9 @@ def validate_ai_output(output: Dict) -> Tuple[bool, str]:
     if not (0 <= output["ats_score"] <= 100):
         return False, "Field 'ats_score' must be between 0 and 100"
 
-    # -----------------------------
-    # Explanation depth (your requirement)
-    # -----------------------------
+    # ------------------
+    # Explanation depth 
+    # -----------------
     explanation = output["detailed_explanation"].strip()
     if len(explanation) < 200:
         return False, (
@@ -127,9 +127,9 @@ def validate_ai_output(output: Dict) -> Tuple[bool, str]:
     return True, "OK"
 
 
-# --------------------------------------------------
+# -------------------------
 # HELPERS (STRUCTURE ONLY)
-# --------------------------------------------------
+# --------------------------
 
 def _validate_list_of_dicts(value: Any) -> bool:
     if not isinstance(value, list):
@@ -141,3 +141,4 @@ def _type_name(t: Any) -> str:
     if isinstance(t, tuple):
         return " or ".join(x.__name__ for x in t)
     return t.__name__
+
