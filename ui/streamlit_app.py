@@ -5,9 +5,9 @@ from pathlib import Path
 import streamlit as st
 import plotly.graph_objects as go
 
-# --------------------------------------------------
+# ----------------
 # SETUP & CONFIG
-# --------------------------------------------------
+# ---------------
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -15,9 +15,9 @@ from app.ai_recruiter_evaluator import evaluate_resume_with_ai
 
 st.set_page_config(page_title="AI Recruiter Pro", page_icon="🚀", layout="wide")
 
-# --------------------------------------------------
+# --------------------------------
 # CUSTOM CSS (Dark Mode Friendly)
-# --------------------------------------------------
+# -------------------------------
 st.markdown("""
     <style>
     .metric-card {
@@ -63,9 +63,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --------------------------------------------------
+# --------------------
 # HELPER: FILE READER
-# --------------------------------------------------
+# --------------------
 def read_input(file_upload, text_input):
     if file_upload:
         return file_upload.read().decode("utf-8", errors="ignore")
@@ -73,9 +73,9 @@ def read_input(file_upload, text_input):
         return text_input.strip()
     return None
 
-# --------------------------------------------------
+# ----------------------------
 # HELPER: DYNAMIC GAUGE CHART
-# --------------------------------------------------
+# ---------------------------
 def create_gauge_chart(score):
     if score >= 75:
         bar_color = "#00CC96"  # Green
@@ -109,9 +109,9 @@ def create_gauge_chart(score):
     )
     return fig
 
-# --------------------------------------------------
+# ----------------
 # STATE MANAGEMENT
-# --------------------------------------------------
+# ----------------
 if "evaluation_result" not in st.session_state:
     st.session_state.evaluation_result = None
 
@@ -119,9 +119,9 @@ def reset_app():
     st.session_state.evaluation_result = None
     st.rerun()
 
-# --------------------------------------------------
+# ---------
 # SIDEBAR
-# --------------------------------------------------
+# ---------
 with st.sidebar:
     st.title("🚀 AI Recruiter Pro")
     st.markdown("---")
@@ -132,9 +132,9 @@ with st.sidebar:
     st.markdown("---")
     st.info("💡 **Pro Tip:** Ensure your resume highlights impact and metrics, not just responsibilities.")
 
-# --------------------------------------------------
+# ---------
 # MAIN UI
-# --------------------------------------------------
+# ---------
 st.markdown("## 🤖 Intelligent Resume Screening System")
 st.markdown("Simulate a Senior Technical Recruiter evaluation in seconds.")
 st.divider()
@@ -277,4 +277,5 @@ else:
         if ka['weak_or_implicit_in_resume']:
             st.markdown(" ".join([f'<span class="weak-pill">~ {k}</span>' for k in ka['weak_or_implicit_in_resume']]), unsafe_allow_html=True)
         else:
+
             st.write("None.")
