@@ -26,17 +26,18 @@ from app.prompts import (
 )
 
 
-# -------------
-# CONFIGURATION
-# -------------
+# ------------------
+# CONFIGURATION 
+# ------------------
 
+# UPDATED: Replaced deprecated 3.1 model with 3.3
 DEFAULT_MODEL = "llama-3.3-70b-versatile"
 MODEL_NAME = os.getenv("GROQ_MODEL", DEFAULT_MODEL)
 
 
-# ----------------
+# -----------------
 # INTERNAL HELPERS
-# ---------------
+# -------------------
 
 def _call_groq(client: Groq, resume_text: str, job_description_text: str) -> str:
     """
@@ -58,6 +59,9 @@ def _call_groq(client: Groq, resume_text: str, job_description_text: str) -> str
                 ),
             },
         ],
+        
+        
+        
         response_format={"type": "json_object"},
         temperature=0.3,
         max_tokens=3000,
@@ -118,7 +122,7 @@ def _extract_json(text: str) -> Dict:
         raise ValueError(f"JSON Parsing Failed: {str(e)}\nContent: {json_str}")
 
 
-# ----------
+# -------
 # PUBLIC API
 # -------
 
