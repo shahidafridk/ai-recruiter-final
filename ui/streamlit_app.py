@@ -9,7 +9,7 @@ import pdfplumber
 import pytesseract
 from pdf2image import convert_from_bytes
 
-# --- Setup & Imports ---
+# --- Setup ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -17,7 +17,7 @@ from app.ai_recruiter_evaluator import evaluate_resume_with_ai
 
 st.set_page_config(page_title="AI Recruiter Pro", page_icon="🚀", layout="wide")
 
-# --- Custom Styling ---
+# --- Custom Styles ---
 st.markdown("""
     <style>
     .metric-card {
@@ -52,7 +52,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- PDF Extraction (Layout + OCR) ---
+# --- PDF Processing (OCR + Layout) ---
 def extract_text_from_pdf(file):
     text = ""
     try:
@@ -60,14 +60,14 @@ def extract_text_from_pdf(file):
         if not file_bytes:
             return None 
             
-        # 1. Try standard extraction (fast, preserves layout)
+        # Fast extraction (preserves columns/tables)
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             for page in pdf.pages:
                 extracted = page.extract_text(layout=True)
                 if extracted:
                     text += extracted + "\n"
         
-        # 2. Fallback to OCR if text is missing/scanned
+        # Fallback to OCR if text is missing (scanned PDFs)
         if len(text.strip()) < 50:
             try:
                 images = convert_from_bytes(file_bytes)
@@ -83,7 +83,7 @@ def extract_text_from_pdf(file):
 
     return text
 
-# --- Input Handling & Validation ---
+# --- File Reading & Safety Checks ---
 def read_input(file_upload, text_input):
     if file_upload:
         try:
@@ -98,20 +98,25 @@ def read_input(file_upload, text_input):
     return None
 
 def validate_uploads(resume_text, jd_text):
-    # Check for empty or unreadable files
+    # 1. Safety: Check for empty/corrupted files
     if not resume_text or len(resume_text) < 50:
-        return False, "⚠️ The Resume file appears to be empty or unreadable. Please check the file."
+        return False, "⚠️ The Resume file looks empty or unreadable. Please check the file."
     if not jd_text or len(jd_text) < 50:
-        return False, "⚠️ The Job Description appears to be empty or too short."
+        return False, "⚠️ The Job Description looks empty or too short."
 
-    # Basic keyword check to detect swapped files
+    # Convert to lower for case-insensitive matching
     r_lower = resume_text.lower()
     
-    # Common JD headers vs Resume headers
+    # 2. Strict Check: Must have at least one 'Resume' keyword
+    # This blocks random files like recipes or lyrics
+    resume_indicators = ["experience", "education", "skills", "projects", "summary", "profile", "contact", "work history"]
+    if not any(ind in r_lower for ind in resume_indicators):
+        return False, "⚠️ The uploaded file doesn't look like a valid resume. (Missing common keywords like 'Experience' or 'Skills')"
+
+    # 3. Swap Check: Did they put the JD in the Resume slot?
     jd_indicators = ["job description", "about the role", "responsibilities", "requirements"]
-    resume_indicators = ["experience", "education", "skills", "projects", "summary", "profile"]
     
-    # If it looks strongly like a JD but lacks Resume keywords, flag it
+    # If it screams 'JD' but whispers 'Resume', it's a swap
     has_jd_title = any(ind in r_lower[:200] for ind in jd_indicators)
     has_resume_content = any(ind in r_lower for ind in resume_indicators)
     
@@ -120,7 +125,7 @@ def validate_uploads(resume_text, jd_text):
 
     return True, "Valid"
 
-# --- Visual Component: Gauge Chart ---
+# --- Gauge Chart Component ---
 def create_gauge_chart(score):
     if score >= 75:
         bar_color = "#00CC96"
@@ -154,7 +159,7 @@ def create_gauge_chart(score):
     )
     return fig
 
-# --- State Management ---
+# --- Session State ---
 if "evaluation_result" not in st.session_state:
     st.session_state.evaluation_result = None
 
@@ -168,7 +173,7 @@ with st.sidebar:
     st.markdown("---")
     st.info("💡 **Mobile Tip:** If uploading from a phone, wait for the file name to appear before clicking Analyze.")
 
-# --- Main Interface ---
+# --- Main App UI ---
 st.markdown("## 🤖 Intelligent Resume Screening System")
 st.divider()
 
@@ -224,7 +229,7 @@ if not st.session_state.evaluation_result:
                     except Exception as e:
                         st.error(f"System Error: {str(e)}")
 
-# --- Results View ---
+# --- Results Dashboard ---
 else:
     res = st.session_state.evaluation_result
     score = res.get("ats_score", 0)
@@ -258,19 +263,17 @@ else:
     with tabs[0]: 
         st.write(res["detailed_explanation"])
 
-    with tabs[1]: # Strengths (Restored Detailed View)
+    with tabs[1]: # Strengths with details
         for s in res["strengths"]:
             with st.expander(f"**{s['title']}**", expanded=True):
                 st.success(f"**Resume Evidence:** {s['resume_reference']}")
-                # RESTORED: Shows context about why this matters
                 st.caption(f"JD Requirement: {s.get('jd_reference', 'N/A')}")
                 st.write(s['explanation'])
 
-    with tabs[2]: # Gaps (Restored Columns)
+    with tabs[2]: # Gaps with comparison columns
         for g in res["gaps"]:
             with st.container():
                 st.error(f"**Gap: {g['title']}**")
-                # RESTORED: The Expected/Found columns
                 c1, c2 = st.columns(2)
                 with c1:
                     st.markdown(f"**Expected:** {g.get('jd_reference', 'N/A')}")
@@ -280,15 +283,14 @@ else:
                 st.markdown(f"*Impact: {g['impact']}*")
                 st.divider()
 
-    with tabs[3]: # Improvements (Restored Context)
+    with tabs[3]: # Coaching with context
         for i in res["improvement_suggestions"]:
             with st.container():
                 st.info(f"👉 **{i['suggestion_title']}**")
                 st.write(f"**Advice:** {i['suggestion']}")
-                # RESTORED: The helpful Context note
                 st.caption(f"Context: {i.get('note', '')}")
 
-    with tabs[4]:
+    with tabs[4]: # Keywords with pills
         ka = res["keyword_analysis"]
         st.markdown("**Matched:** " + " ".join([f'<span class="keyword-pill">✓ {k}</span>' for k in ka['clearly_present_in_resume']]), unsafe_allow_html=True)
         st.markdown("<br>**Missing:** " + " ".join([f'<span class="missing-pill">✗ {k}</span>' for k in ka['missing_from_resume']]), unsafe_allow_html=True)
