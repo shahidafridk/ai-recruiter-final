@@ -258,22 +258,35 @@ else:
     with tabs[0]: 
         st.write(res["detailed_explanation"])
 
-    with tabs[1]:
+    with tabs[1]: # Strengths (Restored Detailed View)
         for s in res["strengths"]:
             with st.expander(f"**{s['title']}**", expanded=True):
-                st.success(f"**Resume:** {s['resume_reference']}")
+                st.success(f"**Resume Evidence:** {s['resume_reference']}")
+                # RESTORED: Shows context about why this matters
+                st.caption(f"JD Requirement: {s.get('jd_reference', 'N/A')}")
                 st.write(s['explanation'])
 
-    with tabs[2]:
+    with tabs[2]: # Gaps (Restored Columns)
         for g in res["gaps"]:
             with st.container():
                 st.error(f"**Gap: {g['title']}**")
+                # RESTORED: The Expected/Found columns
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown(f"**Expected:** {g.get('jd_reference', 'N/A')}")
+                with c2:
+                    st.markdown(f"**Found:** {g.get('resume_reference', 'N/A')}")
+                
                 st.markdown(f"*Impact: {g['impact']}*")
                 st.divider()
 
-    with tabs[3]:
+    with tabs[3]: # Improvements (Restored Context)
         for i in res["improvement_suggestions"]:
-            st.info(f"👉 **{i['suggestion_title']}**: {i['suggestion']}")
+            with st.container():
+                st.info(f"👉 **{i['suggestion_title']}**")
+                st.write(f"**Advice:** {i['suggestion']}")
+                # RESTORED: The helpful Context note
+                st.caption(f"Context: {i.get('note', '')}")
 
     with tabs[4]:
         ka = res["keyword_analysis"]
