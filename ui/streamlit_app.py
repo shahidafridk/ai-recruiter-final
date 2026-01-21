@@ -9,9 +9,7 @@ import pdfplumber
 import pytesseract
 from pdf2image import convert_from_bytes
 
-# --------------------------------------------------
-# SETUP & CONFIG
-# --------------------------------------------------
+# --- Setup & Imports ---
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -19,9 +17,7 @@ from app.ai_recruiter_evaluator import evaluate_resume_with_ai
 
 st.set_page_config(page_title="AI Recruiter Pro", page_icon="🚀", layout="wide")
 
-# --------------------------------------------------
-# CUSTOM CSS (Dark Mode Friendly)
-# --------------------------------------------------
+# --- Custom Styling ---
 st.markdown("""
     <style>
     .metric-card {
@@ -53,71 +49,85 @@ st.markdown("""
         font-size: 0.8em;
         font-weight: 600;
     }
-    .weak-pill {
-        display: inline-block;
-        padding: 5px 10px;
-        background-color: #0E1117;
-        color: #FFA500;
-        border: 1px solid #FFA500;
-        border-radius: 15px;
-        margin: 2px;
-        font-size: 0.8em;
-        font-weight: 600;
-    }
     </style>
 """, unsafe_allow_html=True)
 
-# --------------------------------------------------
-# HELPER: ROBUST PDF EXTRACTOR (Layouts + OCR)
-# --------------------------------------------------
+# --- PDF Extraction (Layout + OCR) ---
 def extract_text_from_pdf(file):
     text = ""
-    file_bytes = file.read()  # Read file into memory once
-    
     try:
-        # METHOD 1: Structural Extraction (pdfplumber)
+        file_bytes = file.read()
+        if not file_bytes:
+            return None 
+            
+        # 1. Try standard extraction (fast, preserves layout)
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             for page in pdf.pages:
                 extracted = page.extract_text(layout=True)
                 if extracted:
                     text += extracted + "\n"
         
-        # METHOD 2: OCR Fallback (if text is suspiciously short, e.g. < 50 chars)
+        # 2. Fallback to OCR if text is missing/scanned
         if len(text.strip()) < 50:
-            images = convert_from_bytes(file_bytes)
-            ocr_text = ""
-            for img in images:
-                ocr_text += pytesseract.image_to_string(img)
-            text = ocr_text
-
-    except Exception as e:
-        return f"Error processing PDF: {str(e)}"
+            try:
+                images = convert_from_bytes(file_bytes)
+                ocr_text = ""
+                for img in images:
+                    ocr_text += pytesseract.image_to_string(img)
+                text = ocr_text
+            except:
+                pass 
+                
+    except Exception:
+        return None
 
     return text
 
-# --------------------------------------------------
-# HELPER: FILE READER
-# --------------------------------------------------
+# --- Input Handling & Validation ---
 def read_input(file_upload, text_input):
     if file_upload:
-        if file_upload.type == "application/pdf":
-            return extract_text_from_pdf(file_upload)
-        # Default to TXT decoding
-        return file_upload.read().decode("utf-8", errors="ignore")
+        try:
+            if file_upload.type == "application/pdf":
+                content = extract_text_from_pdf(file_upload)
+                return content if content else ""
+            return file_upload.read().decode("utf-8", errors="ignore")
+        except:
+            return ""
     if text_input:
         return text_input.strip()
     return None
 
-# --------------------------------------------------
-# HELPER: DYNAMIC GAUGE CHART
-# --------------------------------------------------
+def validate_uploads(resume_text, jd_text):
+    # Check for empty or unreadable files
+    if not resume_text or len(resume_text) < 50:
+        return False, "⚠️ The Resume file appears to be empty or unreadable. Please check the file."
+    if not jd_text or len(jd_text) < 50:
+        return False, "⚠️ The Job Description appears to be empty or too short."
+
+    # Basic keyword check to detect swapped files
+    r_lower = resume_text.lower()
+    
+    # Common JD headers vs Resume headers
+    jd_indicators = ["job description", "about the role", "responsibilities", "requirements"]
+    resume_indicators = ["experience", "education", "skills", "projects", "summary", "profile"]
+    
+    # If it looks strongly like a JD but lacks Resume keywords, flag it
+    has_jd_title = any(ind in r_lower[:200] for ind in jd_indicators)
+    has_resume_content = any(ind in r_lower for ind in resume_indicators)
+    
+    if has_jd_title and not has_resume_content:
+        return False, "⚠️ It looks like you uploaded a Job Description in the 'Resume' slot."
+
+    return True, "Valid"
+
+# --- Visual Component: Gauge Chart ---
 def create_gauge_chart(score):
     if score >= 75:
-        bar_color = "#00CC96"  # Green
+        bar_color = "#00CC96"
     elif score >= 50:
-        bar_color = "#FFA15A"  # Orange
+        bar_color = "#FFA15A"
     else:
-        bar_color = "#EF553B"  # Red
+        bar_color = "#EF553B"
 
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
@@ -144,9 +154,7 @@ def create_gauge_chart(score):
     )
     return fig
 
-# --------------------------------------------------
-# STATE MANAGEMENT
-# --------------------------------------------------
+# --- State Management ---
 if "evaluation_result" not in st.session_state:
     st.session_state.evaluation_result = None
 
@@ -154,27 +162,16 @@ def reset_app():
     st.session_state.evaluation_result = None
     st.rerun()
 
-# --------------------------------------------------
-# SIDEBAR
-# --------------------------------------------------
+# --- Sidebar ---
 with st.sidebar:
     st.title("🚀 AI Recruiter Pro")
     st.markdown("---")
-    st.markdown("### 🎯 How it Works")
-    st.markdown("1. **Upload Resume** (PDF/TXT)")
-    st.markdown("2. **Upload Job Description** (PDF/TXT)")
-    st.markdown("3. **Get AI Feedback**")
-    st.markdown("---")
-    st.info("💡 **Pro Tip:** Ensure your resume highlights impact and metrics, not just responsibilities.")
+    st.info("💡 **Mobile Tip:** If uploading from a phone, wait for the file name to appear before clicking Analyze.")
 
-# --------------------------------------------------
-# MAIN UI
-# --------------------------------------------------
+# --- Main Interface ---
 st.markdown("## 🤖 Intelligent Resume Screening System")
-st.markdown("Simulate a Senior Technical Recruiter evaluation in seconds.")
 st.divider()
 
-# --- INPUT SECTION ---
 if not st.session_state.evaluation_result:
     
     col1, col2 = st.columns(2)
@@ -182,7 +179,6 @@ if not st.session_state.evaluation_result:
     with col1:
         st.subheader("1️⃣ Candidate Resume")
         resume_tab_file, resume_tab_text = st.tabs(["📂 Upload File", "✍️ Paste Text"])
-        
         with resume_tab_file:
             resume_file = st.file_uploader("Upload Resume (PDF/TXT)", type=["txt", "pdf"], key="res_file")
         with resume_tab_text:
@@ -191,7 +187,6 @@ if not st.session_state.evaluation_result:
     with col2:
         st.subheader("2️⃣ Job Description")
         jd_tab_file, jd_tab_text = st.tabs(["📂 Upload File", "✍️ Paste Text"])
-        
         with jd_tab_file:
             jd_file = st.file_uploader("Upload JD (PDF/TXT)", type=["txt", "pdf"], key="jd_file")
         with jd_tab_text:
@@ -199,117 +194,88 @@ if not st.session_state.evaluation_result:
 
     st.markdown("---")
     
-    # Analyze Button
     _, btn_col, _ = st.columns([1, 2, 1])
     with btn_col:
         analyze_btn = st.button("🔍 Analyze Profile Match", type="primary", use_container_width=True)
 
     if analyze_btn:
+        # Read files safely
         resume_content = read_input(resume_file, resume_text)
         jd_content = read_input(jd_file, jd_text)
 
+        # Basic Check
         if not resume_content or not jd_content:
-            st.error("⚠️ Please provide BOTH a Resume and a Job Description.")
+            st.error("⚠️ Please upload BOTH a Resume and a Job Description.")
         else:
-            with st.spinner("🤖 Analyzing credentials against requirements..."):
-                try:
-                    raw_result = evaluate_resume_with_ai(
-                        resume_text=resume_content,
-                        job_description_text=jd_content,
-                    )
-                    st.session_state.evaluation_result = raw_result
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"System Error: {str(e)}")
+            # Deep Validation
+            is_valid, error_msg = validate_uploads(resume_content, jd_content)
+            
+            if not is_valid:
+                st.warning(error_msg)
+            else:
+                with st.spinner("🤖 Analyzing credentials against requirements..."):
+                    try:
+                        raw_result = evaluate_resume_with_ai(
+                            resume_text=resume_content,
+                            job_description_text=jd_content,
+                        )
+                        st.session_state.evaluation_result = raw_result
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"System Error: {str(e)}")
 
-# --- RESULTS DASHBOARD ---
+# --- Results View ---
 else:
     res = st.session_state.evaluation_result
     score = res.get("ats_score", 0)
     decision = res.get("decision", "BORDERLINE")
 
-    # Header Stats
     col_chart, col_decision = st.columns([1, 1.5])
     
     with col_chart:
         st.plotly_chart(create_gauge_chart(score), use_container_width=True)
     
     with col_decision:
-        st.write("") # Spacer
-        st.write("") # Spacer
-        
-        # --- DISPLAY BOTH DECISION AND RECOMMENDATION ---
+        st.write("") 
+        st.write("") 
         if decision == "PASS":
             st.success(f"## ✅ Decision: PASS")
-            st.markdown("**Recommendation:** Strong Hire. Candidate meets core requirements.")
+            st.markdown("**Recommendation:** Strong Hire.")
         elif decision == "BORDERLINE":
             st.warning(f"## ⚠️ Decision: BORDERLINE")
-            st.markdown("**Recommendation:** Interview. Probe specifically on identified gaps.")
+            st.markdown("**Recommendation:** Interview.")
         else:
             st.error(f"## ⛔ Decision: REJECT")
-            st.markdown("**Recommendation:** Do Not Proceed. Significant skill mismatch.")
+            st.markdown("**Recommendation:** Do Not Proceed.")
         
         st.markdown(f"**Executive Summary:** {res['decision_summary']}")
         st.button("🔄 Start New Analysis", on_click=reset_app)
 
     st.divider()
 
-    # Detailed Tabs
     tabs = st.tabs(["📊 Detailed Analysis", "💪 Strengths", "🚩 Gaps", "💡 Coaching Tips", "🔑 Keywords"])
 
-    with tabs[0]: # Analysis
-        st.markdown("### Executive Explanation")
+    with tabs[0]: 
         st.write(res["detailed_explanation"])
 
-    with tabs[1]: # Strengths
-        st.markdown("### ✅ Matching Qualifications")
-        if not res["strengths"]:
-            st.info("No specific strong matches found.")
+    with tabs[1]:
         for s in res["strengths"]:
             with st.expander(f"**{s['title']}**", expanded=True):
-                st.success(f"**Resume Evidence:** {s['resume_reference']}")
-                st.caption(f"JD Requirement: {s['jd_reference']}")
+                st.success(f"**Resume:** {s['resume_reference']}")
                 st.write(s['explanation'])
 
-    with tabs[2]: # Gaps
-        st.markdown("### ⚠️ Critical Missing Requirements")
-        if not res["gaps"]:
-            st.success("No critical gaps found.")
+    with tabs[2]:
         for g in res["gaps"]:
             with st.container():
                 st.error(f"**Gap: {g['title']}**")
-                c1, c2 = st.columns(2)
-                c1.markdown(f"**Expected:** {g['jd_reference']}")
-                c2.markdown(f"**Found:** {g['resume_reference']}")
                 st.markdown(f"*Impact: {g['impact']}*")
                 st.divider()
 
-    with tabs[3]: # Improvements
-        st.markdown("### 🚀 Career Coaching & Feedback")
+    with tabs[3]:
         for i in res["improvement_suggestions"]:
-            with st.container():
-                st.info(f"👉 **{i['suggestion_title']}**")
-                st.write(f"**Advice:** {i['suggestion']}")
-                st.caption(f"Context: {i['note']}")
+            st.info(f"👉 **{i['suggestion_title']}**: {i['suggestion']}")
 
-    with tabs[4]: # Keywords
-        st.markdown("### 🔑 Keyword Scan")
+    with tabs[4]:
         ka = res["keyword_analysis"]
-        
-        st.markdown("**Matched Keywords:**")
-        if ka['clearly_present_in_resume']:
-            st.markdown(" ".join([f'<span class="keyword-pill">✓ {k}</span>' for k in ka['clearly_present_in_resume']]), unsafe_allow_html=True)
-        else:
-            st.write("No direct keyword matches.")
-
-        st.markdown("<br>**Missing Keywords:**", unsafe_allow_html=True)
-        if ka['missing_from_resume']:
-            st.markdown(" ".join([f'<span class="missing-pill">✗ {k}</span>' for k in ka['missing_from_resume']]), unsafe_allow_html=True)
-        else:
-            st.write("No missing keywords detected.")
-            
-        st.markdown("<br>**Weak/Implicit Keywords:**", unsafe_allow_html=True)
-        if ka['weak_or_implicit_in_resume']:
-            st.markdown(" ".join([f'<span class="weak-pill">~ {k}</span>' for k in ka['weak_or_implicit_in_resume']]), unsafe_allow_html=True)
-        else:
-            st.write("None.")
+        st.markdown("**Matched:** " + " ".join([f'<span class="keyword-pill">✓ {k}</span>' for k in ka['clearly_present_in_resume']]), unsafe_allow_html=True)
+        st.markdown("<br>**Missing:** " + " ".join([f'<span class="missing-pill">✗ {k}</span>' for k in ka['missing_from_resume']]), unsafe_allow_html=True)
