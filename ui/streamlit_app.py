@@ -171,7 +171,12 @@ def reset_app():
 with st.sidebar:
     st.title("🚀 AI Recruiter Pro")
     st.markdown("---")
-    st.info("💡 **Mobile Tip:** If uploading from a phone, wait for the file name to appear before clicking Analyze.")
+    st.markdown("### 🎯 How it Works")
+    st.markdown("1. **Upload Resume** (PDF/TXT)")
+    st.markdown("2. **Upload Job Description** (PDF/TXT)")
+    st.markdown("3. **Get AI Feedback**")
+    st.markdown("---")
+    st.info("💡 **Pro Tip:** Ensure your resume highlights impact and metrics, not just responsibilities.")
 
 # --- Main App UI ---
 st.markdown("## 🤖 Intelligent Resume Screening System")
