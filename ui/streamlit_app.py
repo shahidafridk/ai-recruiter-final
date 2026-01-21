@@ -295,7 +295,23 @@ else:
                 st.write(f"**Advice:** {i['suggestion']}")
                 st.caption(f"Context: {i.get('note', '')}")
 
-    with tabs[4]: # Keywords with pills
+    with tabs[4]: # Keywords Enhanced with Impact Layout
         ka = res["keyword_analysis"]
-        st.markdown("**Matched:** " + " ".join([f'<span class="keyword-pill">✓ {k}</span>' for k in ka['clearly_present_in_resume']]), unsafe_allow_html=True)
-        st.markdown("<br>**Missing:** " + " ".join([f'<span class="missing-pill">✗ {k}</span>' for k in ka['missing_from_resume']]), unsafe_allow_html=True)
+        
+        k_col1, k_col2 = st.columns(2)
+
+        with k_col1:
+            st.markdown("### ✅ Found in Resume")
+            st.caption("High Impact Skills Present")
+            if ka['clearly_present_in_resume']:
+                st.markdown(" ".join([f'<span class="keyword-pill">✓ {k}</span>' for k in ka['clearly_present_in_resume']]), unsafe_allow_html=True)
+            else:
+                st.markdown('<span class="missing-pill">⚠ None</span>', unsafe_allow_html=True)
+
+        with k_col2:
+            st.markdown("### ❌ Missing from Resume")
+            st.caption("Critical Gaps (High Impact)")
+            if ka['missing_from_resume']:
+                st.markdown(" ".join([f'<span class="missing-pill">✗ {k}</span>' for k in ka['missing_from_resume']]), unsafe_allow_html=True)
+            else:
+                st.markdown('<span class="keyword-pill">✨ None</span>', unsafe_allow_html=True)
