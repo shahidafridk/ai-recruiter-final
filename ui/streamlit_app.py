@@ -49,6 +49,17 @@ st.markdown("""
         font-size: 0.8em;
         font-weight: 600;
     }
+    .weak-pill {
+        display: inline-block;
+        padding: 5px 10px;
+        background-color: #0E1117;
+        color: #FFA500;
+        border: 1px solid #FFA500;
+        border-radius: 15px;
+        margin: 2px;
+        font-size: 0.8em;
+        font-weight: 600;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -295,23 +306,35 @@ else:
                 st.write(f"**Advice:** {i['suggestion']}")
                 st.caption(f"Context: {i.get('note', '')}")
 
-    with tabs[4]: # Keywords Enhanced with Impact Layout
+    with tabs[4]: # Keywords Enhanced (Matched, Missing, Weak)
         ka = res["keyword_analysis"]
         
-        k_col1, k_col2 = st.columns(2)
+        # 1. Matched Keywords (Green)
+        st.markdown("### 🎯 Matched Keywords")
+        present = ka.get('clearly_present_in_resume', [])
+        if present:
+            st.markdown(" ".join([f'<span class="keyword-pill">✓ {k}</span>' for k in present]), unsafe_allow_html=True)
+        else:
+            st.markdown('<span class="missing-pill">⚠ None</span>', unsafe_allow_html=True)
 
-        with k_col1:
-            st.markdown("### ✅ Found in Resume")
-            st.caption("High Impact Skills Present")
-            if ka['clearly_present_in_resume']:
-                st.markdown(" ".join([f'<span class="keyword-pill">✓ {k}</span>' for k in ka['clearly_present_in_resume']]), unsafe_allow_html=True)
-            else:
-                st.markdown('<span class="missing-pill">⚠ None</span>', unsafe_allow_html=True)
+        st.divider()
 
-        with k_col2:
-            st.markdown("### ❌ Missing from Resume")
-            st.caption("Critical Gaps (High Impact)")
-            if ka['missing_from_resume']:
-                st.markdown(" ".join([f'<span class="missing-pill">✗ {k}</span>' for k in ka['missing_from_resume']]), unsafe_allow_html=True)
-            else:
-                st.markdown('<span class="keyword-pill">✨ None</span>', unsafe_allow_html=True)
+        # 2. Missing Keywords (Red)
+        st.markdown("### ❌ Missing Keywords")
+        missing = ka.get('missing_from_resume', [])
+        if missing:
+            st.markdown(" ".join([f'<span class="missing-pill">✗ {k}</span>' for k in missing]), unsafe_allow_html=True)
+        else:
+            st.markdown('<span class="keyword-pill">✨ None</span>', unsafe_allow_html=True)
+
+        st.divider()
+
+        # 3. Weak/Implicit Keywords (Yellow/Orange)
+        st.markdown("### ⚠️ Weak / Implicit Matches")
+        # Use .get() to safely access this field; defaults to empty list if AI didn't return it
+        weak = ka.get('weak_or_implicit_keywords', [])
+        if weak:
+            st.markdown(" ".join([f'<span class="weak-pill">~ {k}</span>' for k in weak]), unsafe_allow_html=True)
+        else:
+            # If nothing weak found, that's neutral/good, so just plain text
+            st.write("No weak keywords detected.")
