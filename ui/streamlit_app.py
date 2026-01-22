@@ -2,14 +2,19 @@
 
 import sys
 import io
+import os
+import json
 from pathlib import Path
 import streamlit as st
 import plotly.graph_objects as go
 import pdfplumber
 import pytesseract
 from pdf2image import convert_from_bytes
+from dotenv import load_dotenv
+from groq import Groq
 
 # --- Setup ---
+load_dotenv() # Load API keys
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -94,7 +99,7 @@ def extract_text_from_pdf(file):
 
     return text
 
-# --- File Reading & Safety Checks ---
+# --- File Reading ---
 def read_input(file_upload, text_input):
     if file_upload:
         try:
@@ -108,26 +113,77 @@ def read_input(file_upload, text_input):
         return text_input.strip()
     return None
 
+# --- AI Content Validation ---
+def check_content_type_with_ai(text, expected_type):
+    """
+    Asks AI to confirm if the text is a valid Resume or JD.
+    Returns (is_valid, reason).
+    """
+    try:
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        
+        # Analyze first 2000 chars to save tokens/time
+        snippet = text[:2000]
+        
+        prompt = f"""
+        You are a strict document classifier. 
+        Analyze the following text snippet and determine if it is a valid {expected_type}.
+        
+        Rules:
+        1. A 'Resume' must have personal details, experience, education, or skills.
+        2. A 'Job Description' must have a role title, responsibilities, or requirements.
+        3. Recipes, lyrics, essays, or code blocks are INVALID.
+        
+        Text Snippet:
+        "{snippet}"
+        
+        Respond with ONLY a JSON object: {{"is_valid": true/false, "reason": "short explanation"}}
+        """
+        
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile",
+            temperature=0,
+            response_format={"type": "json_object"}
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        return result.get("is_valid", False), result.get("reason", "Unknown error")
+        
+    except Exception as e:
+        # If AI fails (network/key), return None to trigger fallback
+        return None, str(e)
+
 def validate_uploads(resume_text, jd_text):
-    # 1. Safety: Check for empty/corrupted files
+    # 1. Basic Length Check
     if not resume_text or len(resume_text) < 50:
         return False, "⚠️ The Resume file looks empty or unreadable. Please check the file."
     if not jd_text or len(jd_text) < 50:
         return False, "⚠️ The Job Description looks empty or too short."
 
-    # Convert to lower for case-insensitive matching
+    # 2. AI Gatekeeper Check
+    # We try AI first. If it works, we trust it.
+    
+    # Check Resume
+    is_valid_res, reason_res = check_content_type_with_ai(resume_text, "Resume")
+    if is_valid_res is not None: # AI ran successfully
+        if not is_valid_res:
+            return False, f"⚠️ Uploaded 'Resume' detected as invalid. AI says: {reason_res}"
+            
+    # Check JD
+    is_valid_jd, reason_jd = check_content_type_with_ai(jd_text, "Job Description")
+    if is_valid_jd is not None: # AI ran successfully
+        if not is_valid_jd:
+            return False, f"⚠️ Uploaded 'Job Description' detected as invalid. AI says: {reason_jd}"
+
+    # 3. Fallback Keyword Check 
+    # Only runs if AI crashed (is_valid was None). Serves as backup.
     r_lower = resume_text.lower()
     
-    # 2. Strict Check: Must have at least one 'Resume' keyword
-    # This blocks random files like recipes or lyrics
-    resume_indicators = ["experience", "education", "skills", "projects", "summary", "profile", "contact", "work history"]
-    if not any(ind in r_lower for ind in resume_indicators):
-        return False, "⚠️ The uploaded file doesn't look like a valid resume. (Missing common keywords like 'Experience' or 'Skills')"
-
-    # 3. Swap Check: Did they put the JD in the Resume slot?
+    # Swap Check (JD vs Resume)
     jd_indicators = ["job description", "about the role", "responsibilities", "requirements"]
+    resume_indicators = ["experience", "education", "skills", "projects", "summary", "profile", "work history"]
     
-    # If it screams 'JD' but whispers 'Resume', it's a swap
     has_jd_title = any(ind in r_lower[:200] for ind in jd_indicators)
     has_resume_content = any(ind in r_lower for ind in resume_indicators)
     
@@ -228,8 +284,9 @@ if not st.session_state.evaluation_result:
         if not resume_content or not jd_content:
             st.error("⚠️ Please upload BOTH a Resume and a Job Description.")
         else:
-            # Deep Validation
-            is_valid, error_msg = validate_uploads(resume_content, jd_content)
+            # Deep Validation (AI + Keyword Fallback)
+            with st.spinner("🕵️‍♂️ AI Verification: Checking document validity..."):
+                is_valid, error_msg = validate_uploads(resume_content, jd_content)
             
             if not is_valid:
                 st.warning(error_msg)
@@ -331,10 +388,8 @@ else:
 
         # 3. Weak/Implicit Keywords (Yellow/Orange)
         st.markdown("### ⚠️ Weak / Implicit Matches")
-        # Use .get() to safely access this field; defaults to empty list if AI didn't return it
         weak = ka.get('weak_or_implicit_keywords', [])
         if weak:
             st.markdown(" ".join([f'<span class="weak-pill">~ {k}</span>' for k in weak]), unsafe_allow_html=True)
         else:
-            # If nothing weak found, that's neutral/good, so just plain text
             st.write("No weak keywords detected.")
