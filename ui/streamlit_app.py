@@ -244,6 +244,10 @@ with st.sidebar:
     st.markdown("3. **Get AI Feedback**")
     st.markdown("---")
     st.info("💡 **Pro Tip:** Ensure your resume highlights impact and metrics, not just responsibilities.")
+    
+    # Disclaimer
+    st.markdown("---")
+    st.caption("⚠️ **Disclaimer:** This is a demo simulation. AI results should not replace human judgment.")
 
 # --- Main App UI ---
 st.markdown("## 🤖 Intelligent Resume Screening System")
