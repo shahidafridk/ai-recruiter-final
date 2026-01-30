@@ -73,11 +73,12 @@ Unlike basic wrappers, this system features a **"Hybrid Ingestion Engine"** that
 
 ## ⚠️ Disclaimer
 
-* ** This project is a concept simulation developed for academic demonstration. While it uses advanced AI, recruitment decisions should always involve human judgment.).
+* **This project is a concept simulation developed for academic demonstration. While it uses advanced AI, recruitment decisions should always involve human judgment.).**
 
 ---
 
 © 2026 AI Recruiter Pro. MIT License.
+
 
 
 
