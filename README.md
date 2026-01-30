@@ -58,7 +58,7 @@ Unlike basic wrappers, this system features a **"Hybrid Ingestion Engine"** that
 ### Installation Steps
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/shahidafridk/ai-recruiter-final.git](https://github.com/shahidafridk/ai-recruiter-final.git)
+   git clone https://github.com/shahidafridk/ai-recruiter-final.git
    cd ai-recruiter-final
 2. **Install Dependencies:**
    ```bash
@@ -78,6 +78,7 @@ Unlike basic wrappers, this system features a **"Hybrid Ingestion Engine"** that
 ---
 
 © 2026 AI Recruiter Pro. MIT License.
+
 
 
 
