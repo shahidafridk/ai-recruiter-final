@@ -60,3 +60,15 @@ Unlike basic wrappers, this system features a **"Hybrid Ingestion Engine"** that
    ```bash
    git clone [https://github.com/shahidafridk/ai-recruiter-final.git](https://github.com/shahidafridk/ai-recruiter-final.git)
    cd ai-recruiter-final
+2. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+3. **Set up API Keys: Create a .env file in the root directory and add:**
+   ```bash
+   GROQ_API_KEY=your_groq_api_key_here
+4. **Run the Application:**
+   ```bash
+   streamlit run ui/streamlit_app.py
+**⚠️ Disclaimer**
+This project is a concept simulation developed for academic demonstration. While it uses advanced AI, recruitment decisions should always involve human judgment.
+© 2026 AI Recruiter Pro. MIT License.
