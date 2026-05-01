@@ -10,6 +10,7 @@
 **AI Recruiter Pro** is a semantic analysis engine designed to move beyond the "keyword counting" of traditional ATS. It simulates the reasoning of a human Senior Recruiter to evaluate candidates based on **context, potential, and transferable skills**.
 
 Unlike basic wrappers, this system features a **"Hybrid Ingestion Engine"** that can read scanned documents (OCR) and an **"AI Gatekeeper"** that strictly validates files to prevent fraud or errors.
+
 Try it Live : https://ai-recruiter-pro.streamlit.app/
 ---
 
